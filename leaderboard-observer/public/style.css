@@ -50,7 +50,7 @@ body {
 .leaderboard-totals dd { margin: 2px 0 0; font-size: 24px; font-weight: bold; }
 .notice { margin: 8px 0 0; font-size: 14px; font-style: italic; }
 .notice:empty { display: none; }
-.leaderboard-table { overflow: auto; max-height: calc(100vh - 180px); margin: 24px 0 0; }
+.leaderboard-table { margin: 24px 0 0; }
 .leaderboard table {
   width: 100%; min-width: 1000px; table-layout: fixed;
   border-collapse: collapse; font-variant-numeric: tabular-nums;

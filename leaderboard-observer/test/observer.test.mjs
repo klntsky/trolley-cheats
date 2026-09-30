@@ -58,6 +58,7 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
       await new Promise(resolve => setTimeout(resolve, 100));
     assert.ok(gameRequests >= 3, `Expected three game tabs; received ${gameRequests} requests`);
     assert.match(output, /Observing .* with 3 tabs/);
+    assert.match(output, /new: Alice — "First defense"/);
     const dashboardPort = Number(output.match(/Leaderboard dashboard: http:\/\/127\.0\.0\.1:(\d+)\//)?.[1]);
     assert.ok(dashboardPort > 0, output);
     const initialHtml = await (await fetch(`http://127.0.0.1:${dashboardPort}/`)).text();
@@ -82,6 +83,7 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
     const defenseWidth = (await dashboardPage.locator('#rows tr').first().locator('.defense').boundingBox()).width;
     assert.ok(defenseWidth > playerWidth * 2, `Defense width ${defenseWidth} should exceed twice player width ${playerWidth}`);
     assert.equal(await dashboardPage.locator('.leaderboard thead th').first().evaluate(el => getComputedStyle(el).position), 'sticky');
+    assert.equal(await dashboardPage.locator('.leaderboard-table').evaluate(el => getComputedStyle(el).overflowY), 'visible');
     assert.match(await dashboardPage.locator('body').evaluate(el => getComputedStyle(el).fontFamily), /Georgia/);
     const install = dashboardPage.getByRole('link', { name: 'Install an autoclicker + dataminer userscript' });
     assert.equal(await install.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(17, 17, 17)');

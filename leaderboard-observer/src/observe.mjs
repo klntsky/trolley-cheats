@@ -46,6 +46,8 @@ async function observeTab(context, game, signal, tabNumber) {
       const needsScore = version.observations.some(item => !item.leaderboard && item.pendingScore);
       return { changed: outcome !== 'unchanged', result: { outcome, needsScore } };
     }, state);
+    if (outcome !== 'unchanged')
+      console.log(`${seenAt} [tab ${tabNumber}] ${outcome}: ${opponent.name} — ${JSON.stringify(opponent.text)}`);
     let score;
     if (needsScore) {
       const board = await navigate('/leaderboard');
@@ -60,8 +62,8 @@ async function observeTab(context, game, signal, tabNumber) {
         delete observation.pendingScore;
         return { changed: true };
       }, state);
+      console.log(`${new Date().toISOString()} [tab ${tabNumber}] score: ${opponent.name} — ${score.state === 'listed' ? `${score.score} Elo` : 'not on leaderboard'}`);
     }
-    console.log(`${seenAt} [tab ${tabNumber}] ${outcome}: ${opponent.name}${score?.state === 'listed' ? ` (${score.score} Elo)` : ''}`);
   }
 
   await wait((tabNumber - 1) * Math.floor(intervalMs / observerTabs), signal);
