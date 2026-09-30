@@ -94,20 +94,48 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
     await dashboardPage.getByRole('button', { name: 'Close' }).click();
 
     const importFile = join(dir, 'export.json');
-    await writeFile(importFile, JSON.stringify({ schema: 1, pending: [], people: [{ name: 'Alice', versions: [{
-      text: 'Imported defense', firstSeen: '2030-01-01T00:00:00.000Z', lastSeen: '2030-01-01T00:00:00.000Z',
-      observations: [{ id: 'imported-1', seenAt: '2030-01-01T00:00:00.000Z', source: 'Matchup',
-        path: '/', completedAt: null, outcome: null, leaderboard: { state: 'listed', score: '1600',
-          metric: 'elo', elo: 1600, rounds: 3, rank: 5, fetchedAt: '2030-01-01T00:00:00.000Z' } }],
-    }] }] }));
+    await writeFile(importFile, JSON.stringify({ schema: 1, pending: [], people: [
+      { name: 'Alice', versions: [{
+        text: 'Imported defense', firstSeen: '2030-01-01T00:00:00.000Z', lastSeen: '2030-01-01T00:00:00.000Z',
+        observations: [{ id: 'imported-1', seenAt: '2030-01-01T00:00:00.000Z', source: 'Matchup',
+          path: '/', completedAt: null, outcome: null, leaderboard: { state: 'listed', score: '1600',
+            metric: 'elo', elo: 1600, rounds: 3, rank: 5, fetchedAt: '2030-01-01T00:00:00.000Z' } }],
+      }] },
+      { name: 'Bob', versions: [{
+        text: 'Bob defense', firstSeen: '2028-01-01T00:00:00.000Z', lastSeen: '2029-01-01T00:00:00.000Z',
+        observations: [
+          { id: 'bob-old', seenAt: '2028-01-01T00:00:00.000Z', leaderboard: { state: 'listed',
+            metric: 'elo', elo: 1600, score: '1600', rounds: 2, fetchedAt: '2028-01-01T00:00:00.000Z' } },
+          { id: 'bob-new', seenAt: '2029-01-01T00:00:00.000Z', leaderboard: { state: 'listed',
+            metric: 'elo', elo: 1450, score: '1450', rounds: 8, fetchedAt: '2029-01-01T00:00:00.000Z' } },
+        ],
+      }] },
+      { name: 'Dave', versions: [{
+        text: 'Dave defense', firstSeen: '2029-01-01T00:00:00.000Z', lastSeen: '2029-01-01T00:00:00.000Z',
+        observations: [{ id: 'dave', seenAt: '2029-01-01T00:00:00.000Z', leaderboard: { state: 'listed',
+          metric: 'elo', elo: 1500, score: '1500', rounds: 4, fetchedAt: '2029-01-01T00:00:00.000Z' } }],
+      }] },
+      { name: 'Carol', versions: [{
+        text: 'Carol defense', firstSeen: '2029-01-01T00:00:00.000Z', lastSeen: '2029-01-01T00:00:00.000Z',
+        observations: [{ id: 'carol', seenAt: '2029-01-01T00:00:00.000Z', leaderboard: { state: 'n/a' } }],
+      }] },
+    ] }));
     await execFileAsync(process.execPath, ['src/import.mjs', importFile], {
       cwd: new URL('../', import.meta.url), env: { ...process.env, TROLLEY_URL: url, OBSERVER_DATA_DIR: dir },
     });
     const importedHistory = JSON.parse(await readFile(join(dir, 'history.json'), 'utf8'));
     assert.equal(importedHistory.people[0].versions[1].observations[0].source, undefined);
     assert.equal(importedHistory.people[0].versions[1].observations[0].path, undefined);
+    const expandedHtml = await (await fetch(`http://127.0.0.1:${dashboardPort}/`)).text();
+    assert.match(expandedHtml, /<tr class="observed-divider"><th colspan="6">NOT IN THE GAME LEADERBOARD - THE DATA BELOW MAY BE STALE<\/th><\/tr>/);
+    assert.ok(expandedHtml.indexOf('Dave defense') < expandedHtml.indexOf('Bob defense'));
     await dashboardPage.reload();
     await dashboardPage.getByText('Imported defense', { exact: true }).waitFor();
+    assert.deepEqual(await dashboardPage.locator('#rows .observed-row .player').allTextContents(), ['Dave', 'Bob', 'Carol']);
+    assert.deepEqual(await dashboardPage.locator('#rows .observed-row .elo').allTextContents(), ['1500', '1450', 'N/A']);
+    assert.equal(await dashboardPage.locator('#rows .observed-divider th').getAttribute('colspan'), '6');
+    await dashboardPage.evaluate(() => load());
+    assert.deepEqual(await dashboardPage.locator('#rows .observed-row .player').allTextContents(), ['Dave', 'Bob', 'Carol']);
     await dashboardPage.getByRole('button', { name: 'History (2)' }).click();
     assert.match(await dashboardPage.locator('#history-dialog').innerText(), /1600 Elo/);
     await dashboardPage.getByRole('button', { name: 'Close' }).click();

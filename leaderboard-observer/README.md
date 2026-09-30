@@ -4,6 +4,8 @@
 
 The initial HTML includes the current table, so rows appear without waiting for browser JavaScript. The page follows the upstream leaderboard's layout and adds defense columns. GitHub avatars and profile links come from the source leaderboard's existing URLs. The navigation links to the game, the installable userscript, and this repository.
 
+Below the game's top 100, the table lists other observed players by their latest recorded Elo. These scores may be stale; players without a recorded Elo appear last with N/A.
+
 
 The service uses the same `trolley-defense-history-v1` format as the userscript. Exact displayed names identify players; duplicate names are treated as one person. Unchanged defenses add no encounters or score samples. A return to an earlier defense updates its `lastSeen` time without duplicating its text.
 

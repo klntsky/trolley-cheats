@@ -77,6 +77,11 @@ body {
 .leaderboard .elo { font-weight: bold; }
 .leaderboard .defense { text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
 .leaderboard .history-col { text-align: left; }
+.leaderboard .observed-divider th {
+  padding: 14px 10px; text-align: center; white-space: normal;
+  background: #e8e2d7; font-size: 13px; letter-spacing: 0.05em;
+}
+.leaderboard .observed-row { background: #faf9f6; }
 .leaderboard-note { margin: 12px 0 0; font-size: 13px; opacity: 0.7; }
 dialog {
   box-sizing: border-box; width: 96vw; max-width: none; max-height: 88vh;

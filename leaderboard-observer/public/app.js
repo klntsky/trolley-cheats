@@ -58,6 +58,7 @@ function render(data) {
     currentData = data;
     body.replaceChildren();
     totals.replaceChildren();
+    const people = new Map(data.history.people.map(person => [person.name, person]));
     if (data.totals) {
       const list = document.createElement('dl');
       list.className = 'leaderboard-totals';
@@ -72,9 +73,10 @@ function render(data) {
       }
       totals.append(list);
     }
-    for (const entry of data.entries) {
+    function renderRow(entry, observed = false) {
       const row = body.insertRow();
-      const person = data.history.people.find(item => item.name === entry.name);
+      if (observed) row.className = 'observed-row';
+      const person = people.get(entry.name);
       const latest = person?.versions.reduce((a, b) => !a || b.lastSeen > a.lastSeen ? b : a, null);
       cell(row, entry.rank);
       const name = document.createElement('th');
@@ -100,8 +102,8 @@ function render(data) {
       } else who.append(document.createTextNode(entry.name));
       name.append(who);
       row.append(name);
-      cell(row, entry.elo, 'elo');
-      cell(row, entry.rounds);
+      cell(row, entry.score, 'elo');
+      cell(row, entry.rounds ?? 'N/A');
       cell(row, latest?.text || 'Not observed', 'defense');
       const control = cell(row, '', 'history-col');
       if (person) {
@@ -112,6 +114,16 @@ function render(data) {
         button.dataset.historyName = entry.name;
         control.append(button);
       }
+    }
+    data.entries.forEach(entry => renderRow(entry));
+    if (data.observedEntries?.length) {
+      const divider = body.insertRow();
+      divider.className = 'observed-divider';
+      const label = document.createElement('th');
+      label.colSpan = 6;
+      label.textContent = 'NOT IN THE GAME LEADERBOARD - THE DATA BELOW MAY BE STALE';
+      divider.append(label);
+      data.observedEntries.forEach(entry => renderRow(entry, true));
     }
     status.textContent = data.error ? (data.fetchedAt ? 'Leaderboard refresh failed; showing previous results.'
       : 'The leaderboard is temporarily unavailable.') : '';

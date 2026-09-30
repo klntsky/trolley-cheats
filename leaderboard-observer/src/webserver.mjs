@@ -13,10 +13,35 @@ const template = await readFile(new URL('../public/index.html', import.meta.url)
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[char]);
+const observedDivider = 'NOT IN THE GAME LEADERBOARD - THE DATA BELOW MAY BE STALE';
+
+function withObservedEntries(data) {
+  const listed = new Set(data.entries.map(entry => entry.name));
+  const observedEntries = data.fetchedAt ? data.history.people
+    .filter(person => !listed.has(person.name))
+    .map(person => {
+      let latest = null;
+      for (const version of person.versions) for (const observation of version.observations) {
+        for (const rating of [observation.prePlayLeaderboard, observation.leaderboard]) {
+          const elo = Number(rating?.elo ?? rating?.score);
+          if (rating?.state !== 'listed' || (rating.metric !== 'elo' && rating.elo == null)
+            || !Number.isFinite(elo)) continue;
+          const fetchedAt = rating.fetchedAt || observation.seenAt;
+          if (!latest || fetchedAt >= latest.fetchedAt) latest = { elo, rounds: rating.rounds, fetchedAt };
+        }
+      }
+      return { name: person.name, elo: latest?.elo ?? null,
+        score: latest ? String(latest.elo) : 'N/A', rounds: latest?.rounds ?? null,
+        avatar: null, github: null };
+    })
+    .sort((a, b) => (b.elo ?? -Infinity) - (a.elo ?? -Infinity) || a.name.localeCompare(b.name))
+    .map((entry, index) => ({ ...entry, rank: data.entries.length + index + 1 })) : [];
+  return { ...data, observedEntries };
+}
 
 function renderPage(data) {
   const people = new Map(data.history.people.map(person => [person.name, person]));
-  const rows = data.entries.map(entry => {
+  const renderRow = (entry, observed = false) => {
     const person = people.get(entry.name);
     const latest = person?.versions.reduce((a, b) => !a || b.lastSeen > a.lastSeen ? b : a, null);
     const avatar = entry.avatar ? `<img src="${escapeHtml(entry.avatar)}" alt="" width="28" height="28">` : '';
@@ -25,10 +50,13 @@ function renderPage(data) {
       : escapeHtml(entry.name);
     const history = person
       ? `<button class="btn" type="button" data-history-name="${escapeHtml(entry.name)}">History (${person.versions.length})</button>` : '';
-    return `<tr><td>${escapeHtml(entry.rank)}</td><th scope="row" class="player"><span class="who">${avatar}${name}</span></th>`
-      + `<td class="elo">${escapeHtml(entry.elo)}</td><td>${escapeHtml(entry.rounds)}</td>`
+    return `<tr${observed ? ' class="observed-row"' : ''}><td>${escapeHtml(entry.rank)}</td><th scope="row" class="player"><span class="who">${avatar}${name}</span></th>`
+      + `<td class="elo">${escapeHtml(entry.score)}</td><td>${escapeHtml(entry.rounds ?? 'N/A')}</td>`
       + `<td class="defense">${escapeHtml(latest?.text || 'Not observed')}</td><td class="history-col">${history}</td></tr>`;
-  }).join('');
+  };
+  const rows = data.entries.map(entry => renderRow(entry)).join('')
+    + (data.observedEntries.length ? `<tr class="observed-divider"><th colspan="6">${observedDivider}</th></tr>`
+      + data.observedEntries.map(entry => renderRow(entry, true)).join('') : '');
   const totals = data.totals ? `<dl class="leaderboard-totals"><div><dt>Players</dt><dd>${escapeHtml(data.totals.players)}</dd></div>`
     + `<div><dt>Rounds</dt><dd>${escapeHtml(data.totals.rounds)}</dd></div></dl>` : '';
   const status = data.error ? (data.fetchedAt ? 'Leaderboard refresh failed; showing previous results.'
@@ -71,12 +99,12 @@ export async function startDashboard(context) {
       const path = new URL(req.url, 'http://127.0.0.1').pathname;
       if (path === '/') {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.end(renderPage({ ...cache, history: await loadHistory() }));
+        res.end(renderPage(withObservedEntries({ ...cache, history: await loadHistory() })));
         return;
       }
       if (path === '/api/leaderboard') {
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify({ ...cache, history: await loadHistory() }));
+        res.end(JSON.stringify(withObservedEntries({ ...cache, history: await loadHistory() })));
         return;
       }
       const asset = assets.get(path);
