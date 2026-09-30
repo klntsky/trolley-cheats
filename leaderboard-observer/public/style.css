@@ -51,8 +51,15 @@ body {
 .notice:empty { display: none; }
 .leaderboard-table { overflow-x: auto; margin: 24px 0 0; }
 .leaderboard table {
-  width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums;
+  width: 100%; min-width: 1000px; table-layout: fixed;
+  border-collapse: collapse; font-variant-numeric: tabular-nums;
 }
+.leaderboard .rank-width { width: 4%; }
+.leaderboard .player-width { width: 18%; }
+.leaderboard .elo-width { width: 7%; }
+.leaderboard .rounds-width { width: 8%; }
+.leaderboard .defense-width { width: 53%; }
+.leaderboard .history-width { width: 10%; }
 .leaderboard th, .leaderboard td {
   padding: 8px 10px; text-align: right; white-space: nowrap;
   border-bottom: 1px solid #d8d2c6;
@@ -61,11 +68,12 @@ body {
   font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;
   border-bottom: 2px solid var(--ink);
 }
-.leaderboard .player { width: 100%; text-align: left; font-weight: normal; }
-.leaderboard .who { display: inline-flex; align-items: center; gap: 8px; }
+.leaderboard .player { text-align: left; font-weight: normal; white-space: normal; overflow-wrap: anywhere; }
+.leaderboard .who { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; }
+.leaderboard .who a { min-width: 0; overflow-wrap: anywhere; }
 .leaderboard .player img { border-radius: 50%; flex: none; }
 .leaderboard .elo { font-weight: bold; }
-.leaderboard .defense { min-width: 260px; max-width: 440px; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
+.leaderboard .defense { text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
 .leaderboard .history-col { text-align: left; }
 .leaderboard-note { margin: 12px 0 0; font-size: 13px; opacity: 0.7; }
 dialog {

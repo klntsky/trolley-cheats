@@ -75,6 +75,9 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
     await dashboardPage.getByRole('button', { name: 'History (1)' }).waitFor();
     assert.match(await dashboardPage.locator('#rows tr').first().locator('img').getAttribute('src'), /avatars\.githubusercontent\.com\/u\/42/);
     assert.equal(await dashboardPage.locator('#rows tr').first().locator('a').getAttribute('href'), 'https://github.com/alice');
+    const playerWidth = (await dashboardPage.locator('#rows tr').first().locator('.player').boundingBox()).width;
+    const defenseWidth = (await dashboardPage.locator('#rows tr').first().locator('.defense').boundingBox()).width;
+    assert.ok(defenseWidth > playerWidth * 2, `Defense width ${defenseWidth} should exceed twice player width ${playerWidth}`);
     assert.match(await dashboardPage.locator('body').evaluate(el => getComputedStyle(el).fontFamily), /Georgia/);
     const install = dashboardPage.getByRole('link', { name: 'Install an autoclicker + dataminer userscript' });
     assert.equal(await install.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(17, 17, 17)');
