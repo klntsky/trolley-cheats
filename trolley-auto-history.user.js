@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Trolley auto-advance and defense history
 // @namespace    trolley-local
-// @version      2.4.1
+// @version      2.5.0
 // @description  Auto-play or observe opponents, remember their defenses, and show observed leaderboard scores.
 // @match        https://trolley.typememetics.institute/*
 // @run-at       document-idle
@@ -65,6 +65,9 @@
       #observe-only { width: 22px; height: 22px; margin: 0; accent-color: #16803a; cursor: pointer; }
       #observe-help { display: block; padding: 0 12px 8px; background: #fff;
         border-radius: 0 0 8px 8px; font-size: 12px; box-shadow: 0 2px 10px #0003; }
+      #download-data { display: block; width: 100%; margin-top: 6px; padding: 10px 12px;
+        border: 1px solid #64748b; border-radius: 8px; background: #fff;
+        color: #17202a; font-weight: 600; box-shadow: 0 2px 10px #0003; }
       dialog { box-sizing: border-box; width: 96vw; max-height: 88vh;
         padding: 22px; border: 2px solid #334155; border-radius: 14px; overflow: auto;
         background: white; color: #17202a; font: 14px/1.4 system-ui, sans-serif; }
@@ -86,6 +89,7 @@
       <div class="threshold-help">0–3000 · 3000 plays everyone</div>
       <label class="observe"><input id="observe-only" type="checkbox"><span>Observe only</span></label>
       <small id="observe-help">Save defense and score, then draw another without judging. Ignores Elo threshold.</small>
+      <button id="download-data" type="button">Download data</button>
       <div id="status" role="status">Watching for opponents’ defenses.</div>
     </div>
     <dialog aria-labelledby="history-title">
@@ -169,6 +173,21 @@
     cachedDB = db;
     return db;
   }
+
+  ui.querySelector("#download-data").addEventListener("click", () => {
+    try {
+      const json = JSON.stringify(readDB(), null, 2);
+      const url = URL.createObjectURL(new Blob([`${json}\n`], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `trolley-defense-history-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      say("History downloaded. Import it with pnpm run import -- <file>.");
+    } catch (error) { say(`Download failed: ${error.message}`); }
+  });
 
   function withLock(name, action) {
     // Firefox userscript compartments cannot always expose a script Promise to

@@ -1,0 +1,15 @@
+{
+  "name": "trolley-leaderboard-observer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "auth": "node src/auth.mjs",
+    "start": "node src/start.mjs",
+    "import": "node src/import.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0"
+  }
+}

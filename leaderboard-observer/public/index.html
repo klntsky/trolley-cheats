@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trolley leaderboard history</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>Leaderboard</h1><p>Live Elo with observed defense history</p></div>
+      <div id="status" role="status">Loading leaderboard…</div>
+    </header>
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Player</th><th>Elo</th><th>Rounds</th><th>Last observed defense</th><th>Defense history</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <p class="note">Elo is the current overall score. Historical scores were observed with a defense; they are not scores for that defense alone.</p>
+  </main>
+  <dialog id="history-dialog" aria-labelledby="history-title">
+    <div class="dialog-head"><h2 id="history-title"></h2><button id="close-history" type="button">Close</button></div>
+    <p>Distinct defense versions and their recorded leaderboard observations.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Version</th><th>Observed defense</th><th>Defense seen</th><th>Leaderboard score</th><th>Rank</th><th>Rounds</th><th>Score fetched</th><th>Context</th></tr></thead>
+      <tbody id="history-rows"></tbody>
+    </table></div>
+  </dialog>
+</body>
+</html>
