@@ -26,16 +26,35 @@ export function assertHistory(db) {
   return db;
 }
 
+function stripContext(db) {
+  for (const person of db.people) for (const version of person.versions) {
+    for (const observation of version.observations) {
+      if (observation.source === 'Observer' && !observation.leaderboard) observation.pendingScore = true;
+      delete observation.source;
+      delete observation.path;
+      delete observation.outcome;
+      delete observation.completedAt;
+    }
+  }
+  for (const pending of db.pending) {
+    delete pending.source;
+    delete pending.path;
+    delete pending.outcome;
+    delete pending.completedAt;
+  }
+  return db;
+}
+
 export async function loadHistory() {
   const file = await readJson(historyPath, null);
-  if (file) return assertHistory(file);
+  if (file) return stripContext(assertHistory(file));
   const state = await readJson(statePath, null);
   const raw = state?.origins?.find(item => item.origin === origin)?.localStorage?.find(item => item.name === historyKey)?.value;
-  return raw ? assertHistory(JSON.parse(raw)) : emptyHistory();
+  return raw ? stripContext(assertHistory(JSON.parse(raw))) : emptyHistory();
 }
 
 export async function saveHistory(db, state) {
-  assertHistory(db);
+  stripContext(assertHistory(db));
   await writeJson(historyPath, db);
   if (!state) return;
   let site = state.origins.find(item => item.origin === origin);

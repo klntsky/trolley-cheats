@@ -43,8 +43,7 @@ async function observeTab(context, game, signal, tabNumber) {
       const outcome = recordDefense(db, { ...opponent, score: null, seenAt });
       const version = db.people.find(item => item.name === opponent.name)
         .versions.find(item => item.text === opponent.text);
-      const needsScore = version.observations.some(item => !item.leaderboard
-        && (item.pendingScore || item.source === 'Observer'));
+      const needsScore = version.observations.some(item => !item.leaderboard && item.pendingScore);
       return { changed: outcome !== 'unchanged', result: { outcome, needsScore } };
     }, state);
     let score;
@@ -55,8 +54,7 @@ async function observeTab(context, game, signal, tabNumber) {
       await updateHistory(db => {
         const version = db.people.find(item => item.name === opponent.name)
           ?.versions.find(item => item.text === opponent.text);
-        const observation = version?.observations.find(item => !item.leaderboard
-          && (item.pendingScore || item.source === 'Observer'));
+        const observation = version?.observations.find(item => !item.leaderboard && item.pendingScore);
         if (!observation) return { changed: false };
         observation.leaderboard = score;
         delete observation.pendingScore;

@@ -10,6 +10,7 @@ body {
   margin: 8px 0 0; font-size: clamp(24px, 4vw, 36px);
   letter-spacing: 0.08em; text-transform: uppercase;
 }
+.leaderboard-credit { margin: 4px 0 0; font-size: 13px; }
 .leaderboard-nav {
   display: flex; justify-content: center; flex-wrap: wrap;
   gap: 8px; margin: 8px 0 0; font-size: 15px;

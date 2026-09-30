@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Trolley auto-advance and defense history
 // @namespace    trolley-local
-// @version      2.5.1
+// @version      2.5.2
 // @description  Auto-play or observe opponents, remember their defenses, and show observed leaderboard scores.
 // @match        https://trolley.typememetics.institute/*
 // @run-at       document-idle
@@ -174,9 +174,28 @@
     return db;
   }
 
+  function stripContext(db) {
+    let changed = false;
+    for (const person of db.people) for (const version of person.versions) {
+      for (const observation of version.observations) {
+        for (const key of ["source", "path", "outcome", "completedAt"]) {
+          if (key in observation) { delete observation[key]; changed = true; }
+        }
+      }
+    }
+    for (const pending of db.pending) {
+      for (const key of ["source", "path", "outcome", "completedAt"]) {
+        if (key in pending) { delete pending[key]; changed = true; }
+      }
+    }
+    return changed;
+  }
+
   ui.querySelector("#download-data").addEventListener("click", () => {
     try {
-      const json = JSON.stringify(readDB(), null, 2);
+      const db = structuredClone(readDB());
+      stripContext(db);
+      const json = JSON.stringify(db, null, 2);
       const url = URL.createObjectURL(new Blob([`${json}\n`], { type: "application/json" }));
       const link = document.createElement("a");
       link.href = url;
@@ -216,6 +235,8 @@
       return result;
     });
   }
+
+  void transaction((db) => stripContext(db)).catch(fail);
 
   function findObservation(db, snapshot) {
     const player = db.people.find((p) => p.name === snapshot.name);

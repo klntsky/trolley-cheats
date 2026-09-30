@@ -103,6 +103,9 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
     await execFileAsync(process.execPath, ['src/import.mjs', importFile], {
       cwd: new URL('../', import.meta.url), env: { ...process.env, TROLLEY_URL: url, OBSERVER_DATA_DIR: dir },
     });
+    const importedHistory = JSON.parse(await readFile(join(dir, 'history.json'), 'utf8'));
+    assert.equal(importedHistory.people[0].versions[1].observations[0].source, undefined);
+    assert.equal(importedHistory.people[0].versions[1].observations[0].path, undefined);
     await dashboardPage.reload();
     await dashboardPage.getByText('Imported defense', { exact: true }).waitFor();
     await dashboardPage.getByRole('button', { name: 'History (2)' }).click();
