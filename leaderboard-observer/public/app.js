@@ -21,6 +21,7 @@ function cell(row, value, className) {
 function time(value) { return value ? new Date(value).toLocaleString() : '—'; }
 function score(value) {
   return value?.state === 'listed' ? `${value.score} ${value.metric === 'elo' ? 'Elo' : ''}`.trim()
+    : value?.state === 'n/a' ? 'N/A'
     : value?.state === 'not-listed' ? 'Not on leaderboard' : 'Not sampled';
 }
 function showHistory(person) {
