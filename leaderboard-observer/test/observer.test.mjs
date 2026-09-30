@@ -15,18 +15,24 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
   const dir = await mkdtemp(join(tmpdir(), 'trolley-observer-'));
   let defense = 'First defense';
   let playRequests = 0;
+  let gameRequests = 0;
   const server = createServer((req, res) => {
     if (req.method !== 'GET') playRequests++;
     res.setHeader('content-type', 'text/html');
     if (req.url === '/leaderboard') res.end('<main class="leaderboard"><dl class="leaderboard-totals"><div><dt>Players</dt><dd>42</dd></div><div><dt>Rounds</dt><dd>900</dd></div></dl><table><tbody><tr><td>1</td><th><span class="who"><img src="https://avatars.githubusercontent.com/u/42?v=4"><a href="https://github.com/alice">Alice</a></span></th><td class="elo">1700</td><td>12</td></tr></tbody></table></main>');
-    else res.end(`<div class="matchup"><section class="defense"><h2>Their defense</h2><p class="defense-who">Alice, on the upper track</p><blockquote>${defense}</blockquote></section></div>`);
+    else {
+      gameRequests++;
+      setTimeout(() => {
+        res.end(`<div class="matchup"><section class="defense"><h2>Their defense</h2><p class="defense-who">Alice, on the upper track</p><blockquote>${defense}</blockquote></section></div>`);
+      }, 500);
+    }
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${server.address().port}`;
   await writeFile(join(dir, 'session.json'), JSON.stringify({ cookies: [], origins: [] }));
   const child = spawn(process.execPath, ['src/start.mjs'], {
     cwd: new URL('../', import.meta.url),
-    env: { ...process.env, TROLLEY_URL: url, OBSERVER_DATA_DIR: dir, OBSERVER_INTERVAL_MS: '5000',
+    env: { ...process.env, TROLLEY_URL: url, OBSERVER_DATA_DIR: dir, OBSERVER_INTERVAL_MS: '2000',
       OBSERVER_PORT: '0', OBSERVER_LEADERBOARD_REFRESH_MS: '1000' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -45,6 +51,10 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
   let dashboardBrowser;
   try {
     await until(db => db.people[0]?.versions[0]?.observations[0]?.leaderboard?.elo === 1700);
+    for (let attempt = 0; gameRequests < 3 && attempt < 40; attempt++)
+      await new Promise(resolve => setTimeout(resolve, 100));
+    assert.ok(gameRequests >= 3, `Expected three game tabs; received ${gameRequests} requests`);
+    assert.match(output, /Observing .* with 3 tabs/);
     const dashboardPort = Number(output.match(/Leaderboard dashboard: http:\/\/127\.0\.0\.1:(\d+)\//)?.[1]);
     assert.ok(dashboardPort > 0, output);
     const initialHtml = await (await fetch(`http://127.0.0.1:${dashboardPort}/`)).text();
