@@ -50,7 +50,10 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
   }
   let dashboardBrowser;
   try {
-    await until(db => db.people[0]?.versions[0]?.observations[0]?.leaderboard?.elo === 1700);
+    const initial = await until(db => db.people[0]?.versions[0]?.observations[0]?.leaderboard?.elo === 1700);
+    assert.equal(initial.people[0].versions[0].observations[0].source, undefined);
+    assert.equal(initial.people[0].versions[0].observations[0].path, undefined);
+    assert.equal(initial.people[0].versions[0].observations[0].outcome, undefined);
     for (let attempt = 0; gameRequests < 3 && attempt < 40; attempt++)
       await new Promise(resolve => setTimeout(resolve, 100));
     assert.ok(gameRequests >= 3, `Expected three game tabs; received ${gameRequests} requests`);
@@ -78,11 +81,14 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
     const playerWidth = (await dashboardPage.locator('#rows tr').first().locator('.player').boundingBox()).width;
     const defenseWidth = (await dashboardPage.locator('#rows tr').first().locator('.defense').boundingBox()).width;
     assert.ok(defenseWidth > playerWidth * 2, `Defense width ${defenseWidth} should exceed twice player width ${playerWidth}`);
+    assert.equal(await dashboardPage.locator('.leaderboard thead th').first().evaluate(el => getComputedStyle(el).position), 'sticky');
     assert.match(await dashboardPage.locator('body').evaluate(el => getComputedStyle(el).fontFamily), /Georgia/);
     const install = dashboardPage.getByRole('link', { name: 'Install an autoclicker + dataminer userscript' });
     assert.equal(await install.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(17, 17, 17)');
     assert.equal(await dashboardPage.getByRole('link', { name: 'GitHub source' }).evaluate(el => getComputedStyle(el).position), 'absolute');
     await dashboardPage.getByRole('button', { name: 'History (1)' }).click();
+    assert.equal(await dashboardPage.locator('#history-dialog thead th').count(), 7);
+    assert.equal(await dashboardPage.locator('#history-dialog thead th').first().evaluate(el => getComputedStyle(el).position), 'sticky');
     await dashboardPage.locator('#history-dialog').getByText('First defense').waitFor();
     assert.match(await dashboardPage.locator('#history-dialog').innerText(), /1700 Elo/);
     await dashboardPage.getByRole('button', { name: 'Close' }).click();

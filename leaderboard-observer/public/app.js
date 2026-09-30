@@ -33,12 +33,12 @@ function showHistory(person) {
       const samples = [...version.observations].sort((a, b) => b.seenAt.localeCompare(a.seenAt))
         .flatMap(observation => {
           const result = [];
-          if (observation.prePlayLeaderboard) result.push({ observation, rating: observation.prePlayLeaderboard, phase: 'Before play check' });
+          if (observation.prePlayLeaderboard) result.push({ observation, rating: observation.prePlayLeaderboard });
           if (observation.leaderboard || observation.completedAt || !result.length)
-            result.push({ observation, rating: observation.leaderboard, phase: observation.completedAt ? 'After round' : 'Observed' });
+            result.push({ observation, rating: observation.leaderboard });
           return result;
         });
-      samples.forEach(({ observation, rating, phase }, index) => {
+      samples.forEach(({ observation, rating }, index) => {
         const row = historyRows.insertRow();
         if (!index) {
           cell(row, `v${number}`).rowSpan = samples.length;
@@ -49,7 +49,6 @@ function showHistory(person) {
         cell(row, rating?.state === 'listed' ? `#${rating.rank}` : '—');
         cell(row, rating?.state === 'listed' && Number.isInteger(rating.rounds) ? rating.rounds : '—');
         cell(row, time(rating?.fetchedAt));
-        cell(row, [observation.source, phase, phase === 'After round' && observation.outcome].filter(Boolean).join(' · '));
       });
     });
   dialog.showModal();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Trolley auto-advance and defense history
 // @namespace    trolley-local
-// @version      2.5.0
+// @version      2.5.1
 // @description  Auto-play or observe opponents, remember their defenses, and show observed leaderboard scores.
 // @match        https://trolley.typememetics.institute/*
 // @run-at       document-idle
@@ -75,10 +75,10 @@
       h2 { margin: 0; font-size: 24px; overflow-wrap: anywhere; }
       .heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
       #close { padding: 8px 16px; }
-      .scroll { overflow-x: auto; }
+      .scroll { overflow: auto; max-height: calc(88vh - 190px); }
       table { width: 100%; border-collapse: collapse; }
       th, td { padding: 10px; border: 1px solid #cbd5e1; text-align: left; vertical-align: top; }
-      th { background: #e2e8f0; }
+      th { background: #e2e8f0; position: sticky; top: 0; z-index: 1; }
       .defense { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 220px; }
       .time { min-width: 130px; }
     </style>
@@ -96,11 +96,11 @@
       <div class="heading"><h2 id="history-title"></h2><button id="close" type="button">Close</button></div>
       <p>Unique defenses and their score observations. The current leaderboard shows Elo;
         older observations may show survival percentages. Neither is a score calculated for
-        this defense alone. Checks before play and after rounds are labeled.
+        this defense alone.
         Times record observations, not when a defense was edited. Auto-advance waits while this is open.</p>
       <div class="scroll"><table>
         <thead><tr><th>Version</th><th>Observed defense</th><th>Defense seen</th><th>Leaderboard score</th>
-          <th>Rank</th><th>Rounds</th><th>Score fetched</th><th>Context</th></tr></thead>
+          <th>Rank</th><th>Rounds</th><th>Score fetched</th></tr></thead>
         <tbody id="history-body"></tbody>
       </table></div>
     </dialog>`;
@@ -238,8 +238,7 @@
         lastSeen: snapshot.seenAt, observations: [] };
       player.versions.push(version);
       version.observations.push({
-        id: snapshot.id, seenAt: snapshot.seenAt, source: snapshot.source,
-        path: snapshot.path, completedAt: null, outcome: null, leaderboard: null,
+        id: snapshot.id, seenAt: snapshot.seenAt, leaderboard: null,
       });
       return "new";
     });
@@ -258,7 +257,7 @@
   function beginEncounter(opponent, judge, ready) {
     const snapshot = {
       ...opponent, id: crypto.randomUUID(), seenAt: new Date().toISOString(),
-      path: location.pathname, source: location.pathname.startsWith("/round/") ? "Round replay" : "Matchup",
+      path: location.pathname,
     };
     const current = {
       snapshot, readyNode: ready ? judge : null, playbackNode: ready ? null : judge,
@@ -312,20 +311,17 @@
     finally { current.checkingScore = false; }
   }
 
-  function completeEncounter(current, judge) {
+  function completeEncounter(current) {
     if (current.completed) return;
     current.completed = true;
-    const outcome = judge.querySelector(".verdict, .defense-error")?.textContent.trim() || "Round ended";
-    const completedAt = new Date().toISOString();
     let recorded = false;
     current.saved.then(async (state) => {
       if (state === "new") await transaction((db) => {
         const observation = findObservation(db, current.snapshot);
         if (!observation) return;
         recorded = true;
-        observation.completedAt = completedAt;
-        observation.outcome = outcome;
-        db.pending.push({ ...current.snapshot, completedAt, retryAt: 0 });
+        const { id, name, text } = current.snapshot;
+        db.pending.push({ id, name, text, retryAt: 0 });
       });
       return state;
     }).then((state) => {
@@ -352,7 +348,7 @@
       encounter = beginEncounter(opponent, judge, ready);
     }
     if (!ready) encounter.playbackNode = judge;
-    if (label === "Next opponent" || label === "Drawing...") completeEncounter(encounter, judge);
+    if (label === "Next opponent" || label === "Drawing...") completeEncounter(encounter);
 
     if (!advance || paused || storageFailed || dialog.open || Date.now() - lastClick < 1500) return;
     if (label !== "Judge" && label !== "Next opponent") return;
@@ -499,13 +495,14 @@
         const observations = [...version.observations].sort((a, b) => b.seenAt.localeCompare(a.seenAt));
         const samples = observations.flatMap((observation) => {
           const result = [];
-          if (observation.prePlayLeaderboard) result.push({ observation, score: observation.prePlayLeaderboard, phase: "Before play check" });
-          if (observation.leaderboard || observation.completedAt || !result.length) {
-            result.push({ observation, score: observation.leaderboard, phase: observation.completedAt ? "After round" : "Observed" });
+          if (observation.prePlayLeaderboard) result.push({ observation, score: observation.prePlayLeaderboard });
+          if (observation.leaderboard || observation.completedAt
+            || db.pending.some((job) => job.id === observation.id) || !result.length) {
+            result.push({ observation, score: observation.leaderboard });
           }
           return result;
         });
-        samples.forEach(({ observation, score, phase }, index) => {
+        samples.forEach(({ observation, score }, index) => {
           const row = document.createElement("tr");
           if (!index) {
             cell(row, `v${number}`).rowSpan = samples.length;
@@ -515,11 +512,10 @@
           cell(row, time(observation.seenAt), "time");
           cell(row, score?.state === "listed" ? scoreLabel(score) : score?.state === "not-listed"
             ? "Not on leaderboard" : pending?.error ? `Retry pending: ${pending.error}`
-              : observation.completedAt ? "Fetch pending" : "Not sampled");
+              : pending || observation.completedAt ? "Fetch pending" : "Not sampled");
           cell(row, score?.state === "listed" ? `#${score.rank}` : "—");
           cell(row, score?.state === "listed" && Number.isInteger(score.rounds) ? String(score.rounds) : "—");
           cell(row, time(score?.fetchedAt), "time");
-          cell(row, [observation.source, phase, phase === "After round" && observation.outcome].filter(Boolean).join(" · "));
           body.append(row);
         });
       });

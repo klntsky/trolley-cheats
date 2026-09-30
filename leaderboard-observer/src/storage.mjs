@@ -124,8 +124,7 @@ export function recordDefense(db, { name, text, score, seenAt = new Date().toISO
   person.versions.push({
     text, firstSeen: seenAt, lastSeen: seenAt,
     observations: [{
-      id: crypto.randomUUID(), seenAt, source: 'Observer', path: '/',
-      completedAt: null, outcome: null, leaderboard: score,
+      id: crypto.randomUUID(), seenAt, leaderboard: score, pendingScore: !score,
     }],
   });
   return 'new';

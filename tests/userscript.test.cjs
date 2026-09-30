@@ -80,6 +80,8 @@ test("userscript in Chromium against source-shaped page fixtures", async (t) => 
     await wait((key) => JSON.parse(localStorage.getItem(key))?.people.length === 1, dbKey);
     assert.equal((await db()).people[0].name, "Alice");
     assert.equal((await db()).people[0].versions[0].text, "First defense");
+    const observation = (await db()).people[0].versions[0].observations[0];
+    for (const field of ['source', 'path', 'outcome', 'completedAt']) assert.equal(observation[field], undefined);
     assert.equal(requests, 0);
   });
 
@@ -158,6 +160,8 @@ test("userscript in Chromium against source-shaped page fixtures", async (t) => 
   await t.test("popup shows the complete score history and survives leaderboard navigation", async () => {
     await page.click(".leaderboard tbody tr button");
     assert.equal(await page.evaluate(() => document.querySelector("#trolley-history-controls").shadowRoot.querySelector("dialog").open), true);
+    assert.equal(await page.evaluate(() => document.querySelector("#trolley-history-controls").shadowRoot.querySelectorAll("dialog thead th").length), 7);
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#trolley-history-controls").shadowRoot.querySelector("dialog thead th")).position), 'sticky');
     const contents = await page.evaluate(() => document.querySelector("#trolley-history-controls").shadowRoot.querySelector("#history-body").textContent);
     for (const text of ["First defense", "Second defense", "70.0%", "80.0%"]) assert.ok(contents.includes(text));
     await page.evaluate(() => document.querySelector("#trolley-history-controls").shadowRoot.querySelector("#close").click());
@@ -282,7 +286,7 @@ test("userscript in Chromium against source-shaped page fixtures", async (t) => 
       assert.equal(await page.evaluate(() => localStorage.getItem("test-judge-clicks")), "0");
       const observation = await lastFilterObservation();
       assert.equal(observation.prePlayLeaderboard.score, score);
-      assert.equal(observation.completedAt, null);
+      assert.equal(observation.completedAt, undefined);
       assert.equal(observation.leaderboard, null);
     });
   }
@@ -345,7 +349,7 @@ test("userscript in Chromium against source-shaped page fixtures", async (t) => 
     assert.equal(await page.evaluate(() => localStorage.getItem("trolley-auto-advance-observe-only")), "true");
     const observation = await lastFilterObservation();
     assert.equal(observation.prePlayLeaderboard.score, "1499");
-    assert.equal(observation.completedAt, null);
+    assert.equal(observation.completedAt, undefined);
     assert.equal(observation.leaderboard, null);
     const historyBeforeReload = await page.evaluate((key) => localStorage.getItem(key), dbKey);
     await page.evaluate(() => localStorage.setItem("trolley-auto-advance-paused", "true"));
