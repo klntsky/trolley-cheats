@@ -53,8 +53,11 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
     assert.match(initialHtml, /avatars\.githubusercontent\.com\/u\/42/);
     assert.match(initialHtml, /href="https:\/\/github\.com\/alice"/);
     assert.match(initialHtml, /<dt>Players<\/dt><dd>42<\/dd>/);
-    assert.match(initialHtml, /Install userscript/);
-    assert.match(initialHtml, /GitHub source/);
+    assert.match(initialHtml, /Install an autoclicker \+ dataminer userscript/);
+    assert.match(initialHtml, /aria-label="GitHub source"/);
+    const mark = await fetch(`http://127.0.0.1:${dashboardPort}/github-mark.png`);
+    assert.equal(mark.headers.get('content-type'), 'image/png');
+    assert.ok((await mark.arrayBuffer()).byteLength > 1000);
     assert.doesNotMatch(initialHtml, /Live Elo with observed defense history|Leaderboard fetched|Historical scores were observed/);
     dashboardBrowser = await chromium.launch();
     const dashboardPage = await dashboardBrowser.newPage();
@@ -63,6 +66,9 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
     assert.match(await dashboardPage.locator('#rows tr').first().locator('img').getAttribute('src'), /avatars\.githubusercontent\.com\/u\/42/);
     assert.equal(await dashboardPage.locator('#rows tr').first().locator('a').getAttribute('href'), 'https://github.com/alice');
     assert.match(await dashboardPage.locator('body').evaluate(el => getComputedStyle(el).fontFamily), /Georgia/);
+    const install = dashboardPage.getByRole('link', { name: 'Install an autoclicker + dataminer userscript' });
+    assert.equal(await install.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(17, 17, 17)');
+    assert.equal(await dashboardPage.getByRole('link', { name: 'GitHub source' }).evaluate(el => getComputedStyle(el).position), 'absolute');
     await dashboardPage.getByRole('button', { name: 'History (1)' }).click();
     await dashboardPage.locator('#history-dialog').getByText('First defense').waitFor();
     assert.match(await dashboardPage.locator('#history-dialog').innerText(), /1700 Elo/);

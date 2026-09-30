@@ -7,6 +7,7 @@ import { readLeaderboard, readLeaderboardTotals } from './site.mjs';
 const assets = new Map([
   ['/app.js', { file: new URL('../public/app.js', import.meta.url), type: 'text/javascript; charset=utf-8' }],
   ['/style.css', { file: new URL('../public/style.css', import.meta.url), type: 'text/css; charset=utf-8' }],
+  ['/github-mark.png', { file: new URL('../public/github-mark.png', import.meta.url), type: 'image/png' }],
 ]);
 const template = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -64,7 +65,7 @@ export async function startDashboard(context) {
   const server = createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src data: https://avatars.githubusercontent.com; connect-src 'self'; base-uri 'none'; form-action 'none'");
+    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self'; base-uri 'none'; form-action 'none'");
     if (req.method !== 'GET') { res.writeHead(405); res.end('Method not allowed'); return; }
     try {
       const path = new URL(req.url, 'http://127.0.0.1').pathname;

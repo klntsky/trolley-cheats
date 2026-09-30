@@ -22,6 +22,23 @@ body {
   color: var(--ink); background: var(--bg); border: 2px solid var(--ink); cursor: pointer;
 }
 .btn:hover { color: var(--bg); background: var(--ink); }
+.leaderboard .install-btn {
+  padding: 12px 22px; border: 3px solid var(--ink);
+  color: var(--bg); background: var(--ink);
+  font-size: clamp(15px, 2vw, 20px); line-height: 1.2;
+  text-align: center;
+}
+.leaderboard .install-btn:hover { color: var(--ink); background: var(--bg); }
+.github-corner {
+  position: absolute; top: 12px; right: 12px;
+  display: grid; place-items: center; width: 56px; height: 56px;
+}
+.github-corner img { width: 52px; height: 52px; }
+.github-corner:hover { opacity: 0.7; }
+@media (max-width: 650px) {
+  .leaderboard h1 { padding-right: 48px; padding-left: 48px; }
+  .leaderboard-nav { padding-top: 8px; }
+}
 .leaderboard-totals {
   display: flex; justify-content: center; gap: 32px; margin: 20px 0 0;
   font-variant-numeric: tabular-nums;
