@@ -1,21 +1,66 @@
-:root { font: 15px/1.45 system-ui, sans-serif; color: #17202a; background: #f7f5f1; }
+:root { --bg: #fff; --ink: #111; }
 * { box-sizing: border-box; }
-body { margin: 0; }
-main { width: 100%; padding: 22px; }
-header { display: flex; justify-content: space-between; align-items: start; gap: 18px; flex-wrap: wrap; }
-h1 { margin: 0; font: 700 32px/1.1 Georgia, serif; }
-h2 { margin: 0; font: 700 26px/1.2 Georgia, serif; }
-header p, .note { color: #526071; }
-#status { padding: 8px 12px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; }
-.table-wrap { width: 100%; overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; background: white; margin-top: 18px; }
-th, td { padding: 10px; border: 1px solid #cbd5e1; vertical-align: top; text-align: left; }
-th { background: #e9edf1; white-space: nowrap; }
-td.defense { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 260px; max-width: 440px; }
-td.name { min-width: 170px; }
-button { font: inherit; padding: 7px 12px; background: white; border: 1px solid #64748b; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-button:hover { background: #edf2f7; }
-dialog { width: 96vw; max-width: none; max-height: 88vh; padding: 22px; border: 2px solid #334155; border-radius: 14px; overflow: auto; }
+body {
+  margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; padding: 16px; background: var(--bg); color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+}
+.leaderboard { width: 100%; text-align: center; }
+.leaderboard h1 {
+  margin: 8px 0 0; font-size: clamp(24px, 4vw, 36px);
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.leaderboard-nav {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 8px; margin: 8px 0 0; font-size: 15px;
+}
+.leaderboard a { color: inherit; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+  font: bold 13px Georgia, "Times New Roman", serif; letter-spacing: 0.08em;
+  text-transform: uppercase; text-decoration: none; vertical-align: middle;
+  color: var(--ink); background: var(--bg); border: 2px solid var(--ink); cursor: pointer;
+}
+.btn:hover { color: var(--bg); background: var(--ink); }
+.leaderboard-totals {
+  display: flex; justify-content: center; gap: 32px; margin: 20px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.leaderboard-totals dt {
+  font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;
+}
+.leaderboard-totals dd { margin: 2px 0 0; font-size: 24px; font-weight: bold; }
+.notice { margin: 8px 0 0; font-size: 14px; font-style: italic; }
+.notice:empty { display: none; }
+.leaderboard-table { overflow-x: auto; margin: 24px 0 0; }
+.leaderboard table {
+  width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums;
+}
+.leaderboard th, .leaderboard td {
+  padding: 8px 10px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid #d8d2c6;
+}
+.leaderboard thead th {
+  font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;
+  border-bottom: 2px solid var(--ink);
+}
+.leaderboard .player { width: 100%; text-align: left; font-weight: normal; }
+.leaderboard .who { display: inline-flex; align-items: center; gap: 8px; }
+.leaderboard .player img { border-radius: 50%; flex: none; }
+.leaderboard .elo { font-weight: bold; }
+.leaderboard .defense { min-width: 260px; max-width: 440px; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
+.leaderboard .history-col { text-align: left; }
+.leaderboard-note { margin: 12px 0 0; font-size: 13px; opacity: 0.7; }
+dialog {
+  box-sizing: border-box; width: 96vw; max-width: none; max-height: 88vh;
+  padding: 22px; border: 2px solid var(--ink); overflow: auto;
+  background: var(--bg); color: var(--ink); font: 14px/1.4 Georgia, "Times New Roman", serif;
+}
 dialog::backdrop { background: #0009; }
 .dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
-.note { font-size: 13px; }
+.dialog-head h2 { margin: 0; }
+.history-table-wrap { overflow-x: auto; }
+dialog table { width: 100%; border-collapse: collapse; }
+dialog th, dialog td { padding: 8px 10px; border-bottom: 1px solid #d8d2c6; text-align: left; vertical-align: top; }
+dialog th { white-space: nowrap; border-bottom: 2px solid var(--ink); }
+dialog .defense { min-width: 220px; white-space: pre-wrap; overflow-wrap: anywhere; }

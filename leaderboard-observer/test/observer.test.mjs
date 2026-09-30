@@ -18,7 +18,7 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
   const server = createServer((req, res) => {
     if (req.method !== 'GET') playRequests++;
     res.setHeader('content-type', 'text/html');
-    if (req.url === '/leaderboard') res.end('<main class="leaderboard"><table><tbody><tr><td>1</td><th><span class="who"><img><span>Alice</span></span></th><td class="elo">1700</td><td>12</td></tr></tbody></table></main>');
+    if (req.url === '/leaderboard') res.end('<main class="leaderboard"><dl class="leaderboard-totals"><div><dt>Players</dt><dd>42</dd></div><div><dt>Rounds</dt><dd>900</dd></div></dl><table><tbody><tr><td>1</td><th><span class="who"><img src="https://avatars.githubusercontent.com/u/42?v=4"><a href="https://github.com/alice">Alice</a></span></th><td class="elo">1700</td><td>12</td></tr></tbody></table></main>');
     else res.end(`<div class="matchup"><section class="defense"><h2>Their defense</h2><p class="defense-who">Alice, on the upper track</p><blockquote>${defense}</blockquote></section></div>`);
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -47,10 +47,22 @@ test('observes versions and Elo without starting rounds', { timeout: 40_000 }, a
     await until(db => db.people[0]?.versions[0]?.observations[0]?.leaderboard?.elo === 1700);
     const dashboardPort = Number(output.match(/Leaderboard dashboard: http:\/\/127\.0\.0\.1:(\d+)\//)?.[1]);
     assert.ok(dashboardPort > 0, output);
+    const initialHtml = await (await fetch(`http://127.0.0.1:${dashboardPort}/`)).text();
+    assert.match(initialHtml, /<tbody id="rows"><tr>/);
+    assert.match(initialHtml, /First defense/);
+    assert.match(initialHtml, /avatars\.githubusercontent\.com\/u\/42/);
+    assert.match(initialHtml, /href="https:\/\/github\.com\/alice"/);
+    assert.match(initialHtml, /<dt>Players<\/dt><dd>42<\/dd>/);
+    assert.match(initialHtml, /Install userscript/);
+    assert.match(initialHtml, /GitHub source/);
+    assert.doesNotMatch(initialHtml, /Live Elo with observed defense history|Leaderboard fetched|Historical scores were observed/);
     dashboardBrowser = await chromium.launch();
     const dashboardPage = await dashboardBrowser.newPage();
     await dashboardPage.goto(`http://127.0.0.1:${dashboardPort}/`);
     await dashboardPage.getByRole('button', { name: 'History (1)' }).waitFor();
+    assert.match(await dashboardPage.locator('#rows tr').first().locator('img').getAttribute('src'), /avatars\.githubusercontent\.com\/u\/42/);
+    assert.equal(await dashboardPage.locator('#rows tr').first().locator('a').getAttribute('href'), 'https://github.com/alice');
+    assert.match(await dashboardPage.locator('body').evaluate(el => getComputedStyle(el).fontFamily), /Georgia/);
     await dashboardPage.getByRole('button', { name: 'History (1)' }).click();
     await dashboardPage.locator('#history-dialog').getByText('First defense').waitFor();
     assert.match(await dashboardPage.locator('#history-dialog').innerText(), /1700 Elo/);

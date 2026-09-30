@@ -2,7 +2,15 @@ const body = document.querySelector('#rows');
 const status = document.querySelector('#status');
 const dialog = document.querySelector('#history-dialog');
 const historyRows = document.querySelector('#history-rows');
+const totals = document.querySelector('#totals');
+let currentData = JSON.parse(document.querySelector('#initial-data').textContent);
 document.querySelector('#close-history').addEventListener('click', () => dialog.close());
+body.addEventListener('click', event => {
+  const button = event.target.closest('button[data-history-name]');
+  if (!button) return;
+  const person = currentData.history.people.find(item => item.name === button.dataset.historyName);
+  if (person) showHistory(person);
+});
 
 function cell(row, value, className) {
   const td = row.insertCell();
@@ -46,34 +54,74 @@ function showHistory(person) {
   dialog.showModal();
 }
 
-async function load() {
-  try {
-    const response = await fetch('/api/leaderboard', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`Dashboard HTTP ${response.status}`);
-    const data = await response.json();
+function render(data) {
+    currentData = data;
     body.replaceChildren();
+    totals.replaceChildren();
+    if (data.totals) {
+      const list = document.createElement('dl');
+      list.className = 'leaderboard-totals';
+      for (const [label, value] of [['Players', data.totals.players], ['Rounds', data.totals.rounds]]) {
+        const item = document.createElement('div');
+        const term = document.createElement('dt');
+        term.textContent = label;
+        const count = document.createElement('dd');
+        count.textContent = value;
+        item.append(term, count);
+        list.append(item);
+      }
+      totals.append(list);
+    }
     for (const entry of data.entries) {
       const row = body.insertRow();
       const person = data.history.people.find(item => item.name === entry.name);
       const latest = person?.versions.reduce((a, b) => !a || b.lastSeen > a.lastSeen ? b : a, null);
       cell(row, entry.rank);
-      cell(row, entry.name, 'name');
-      cell(row, entry.elo);
+      const name = document.createElement('th');
+      name.scope = 'row';
+      name.className = 'player';
+      const who = document.createElement('span');
+      who.className = 'who';
+      if (entry.avatar) {
+        const image = document.createElement('img');
+        image.src = entry.avatar;
+        image.alt = '';
+        image.width = 28;
+        image.height = 28;
+        who.append(image);
+      }
+      if (entry.github) {
+        const link = document.createElement('a');
+        link.href = entry.github;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = entry.name;
+        who.append(link);
+      } else who.append(document.createTextNode(entry.name));
+      name.append(who);
+      row.append(name);
+      cell(row, entry.elo, 'elo');
       cell(row, entry.rounds);
       cell(row, latest?.text || 'Not observed', 'defense');
-      const control = cell(row, '');
+      const control = cell(row, '', 'history-col');
       if (person) {
         const button = document.createElement('button');
         button.type = 'button';
+        button.className = 'btn';
         button.textContent = `History (${person.versions.length})`;
-        button.addEventListener('click', () => showHistory(person));
+        button.dataset.historyName = entry.name;
         control.append(button);
       }
     }
-    status.textContent = data.fetchedAt
-      ? `Leaderboard fetched ${time(data.fetchedAt)}${data.error ? ` · Refresh failed: ${data.error}` : ''}`
-      : data.error ? `Leaderboard unavailable: ${data.error}` : 'Loading leaderboard…';
+    status.textContent = data.error ? (data.fetchedAt ? 'Leaderboard refresh failed; showing previous results.'
+      : 'The leaderboard is temporarily unavailable.') : '';
+}
+
+async function load() {
+  try {
+    const response = await fetch('/api/leaderboard', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Dashboard HTTP ${response.status}`);
+    render(await response.json());
   } catch (error) { status.textContent = `Dashboard error: ${error.message}`; }
 }
-load();
 setInterval(load, 10_000);

@@ -2,17 +2,49 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dashboardPort, leaderboardRefreshMs, origin } from './config.mjs';
 import { loadHistory } from './storage.mjs';
-import { readLeaderboard } from './site.mjs';
+import { readLeaderboard, readLeaderboardTotals } from './site.mjs';
 
 const assets = new Map([
-  ['/', { file: new URL('../public/index.html', import.meta.url), type: 'text/html; charset=utf-8' }],
   ['/app.js', { file: new URL('../public/app.js', import.meta.url), type: 'text/javascript; charset=utf-8' }],
   ['/style.css', { file: new URL('../public/style.css', import.meta.url), type: 'text/css; charset=utf-8' }],
 ]);
+const template = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+})[char]);
+
+function renderPage(data) {
+  const people = new Map(data.history.people.map(person => [person.name, person]));
+  const rows = data.entries.map(entry => {
+    const person = people.get(entry.name);
+    const latest = person?.versions.reduce((a, b) => !a || b.lastSeen > a.lastSeen ? b : a, null);
+    const avatar = entry.avatar ? `<img src="${escapeHtml(entry.avatar)}" alt="" width="28" height="28">` : '';
+    const name = entry.github
+      ? `<a href="${escapeHtml(entry.github)}" target="_blank" rel="noopener noreferrer">${escapeHtml(entry.name)}</a>`
+      : escapeHtml(entry.name);
+    const history = person
+      ? `<button class="btn" type="button" data-history-name="${escapeHtml(entry.name)}">History (${person.versions.length})</button>` : '';
+    return `<tr><td>${escapeHtml(entry.rank)}</td><th scope="row" class="player"><span class="who">${avatar}${name}</span></th>`
+      + `<td class="elo">${escapeHtml(entry.elo)}</td><td>${escapeHtml(entry.rounds)}</td>`
+      + `<td class="defense">${escapeHtml(latest?.text || 'Not observed')}</td><td class="history-col">${history}</td></tr>`;
+  }).join('');
+  const totals = data.totals ? `<dl class="leaderboard-totals"><div><dt>Players</dt><dd>${escapeHtml(data.totals.players)}</dd></div>`
+    + `<div><dt>Rounds</dt><dd>${escapeHtml(data.totals.rounds)}</dd></div></dl>` : '';
+  const status = data.error ? (data.fetchedAt ? 'Leaderboard refresh failed; showing previous results.'
+    : 'The leaderboard is temporarily unavailable.') : '';
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  return template
+    .replace('<tbody id="rows"></tbody>', `<tbody id="rows">${rows}</tbody>`)
+    .replace('<div id="totals"></div>', `<div id="totals">${totals}</div>`)
+    .replace('<p id="status" class="notice" role="status"></p>',
+      `<p id="status" class="notice" role="status">${escapeHtml(status)}</p>`)
+    .replace('<script id="initial-data" type="application/json"></script>',
+      `<script id="initial-data" type="application/json">${json}</script>`);
+}
 
 export async function startDashboard(context) {
   const page = await context.newPage();
-  let cache = { entries: [], fetchedAt: null, error: null };
+  let cache = { entries: [], totals: null, fetchedAt: null, error: null };
   let inFlight = null;
   function refresh() {
     if (inFlight) return inFlight;
@@ -20,7 +52,8 @@ export async function startDashboard(context) {
       try {
         const response = await page.goto(`${origin}/leaderboard`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
         if (!response?.ok()) throw new Error(`Leaderboard HTTP ${response?.status() ?? 'unknown'}`);
-        cache = { entries: await readLeaderboard(page), fetchedAt: new Date().toISOString(), error: null };
+        const [entries, totals] = await Promise.all([readLeaderboard(page), readLeaderboardTotals(page)]);
+        cache = { entries, totals, fetchedAt: new Date().toISOString(), error: null };
       } catch (error) {
         cache = { ...cache, error: error.message };
         console.error(`Leaderboard refresh failed: ${error.message}`);
@@ -31,10 +64,15 @@ export async function startDashboard(context) {
   const server = createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'");
+    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src data: https://avatars.githubusercontent.com; connect-src 'self'; base-uri 'none'; form-action 'none'");
     if (req.method !== 'GET') { res.writeHead(405); res.end('Method not allowed'); return; }
     try {
       const path = new URL(req.url, 'http://127.0.0.1').pathname;
+      if (path === '/') {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.end(renderPage({ ...cache, history: await loadHistory() }));
+        return;
+      }
       if (path === '/api/leaderboard') {
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         res.end(JSON.stringify({ ...cache, history: await loadHistory() }));
@@ -50,6 +88,7 @@ export async function startDashboard(context) {
       res.end('Dashboard unavailable');
     }
   });
+  await refresh();
   try {
     await new Promise((resolve, reject) => {
       server.once('error', reject);
@@ -60,7 +99,6 @@ export async function startDashboard(context) {
     throw error;
   }
   console.log(`Leaderboard dashboard: http://127.0.0.1:${server.address().port}/`);
-  void refresh();
   const timer = setInterval(() => { void refresh(); }, leaderboardRefreshMs);
   return {
     close: async () => {

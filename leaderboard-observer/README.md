@@ -2,6 +2,8 @@
 
 `pnpm run start` runs the observer and a leaderboard dashboard together. The observer opens the signed-in game page, reads the displayed opponent name and defense, and checks `/leaderboard` when it discovers a new defense. It only navigates pages; it never presses Judge or creates a round. The dashboard listens on **http://127.0.0.1:9871/** and refetches the site's leaderboard every 90 seconds. Its added columns show the last observed defense and a History popup with recorded scores. The dashboard serves only read-only routes; it does not expose session data or import operations. You can put a reverse proxy in front of it if you want others to view it.
 
+The initial HTML includes the current table, so rows appear without waiting for browser JavaScript. The page follows the upstream leaderboard's layout and adds defense columns. GitHub avatars and profile links come from the source leaderboard's existing URLs. The navigation links to the game, the installable userscript, and this repository.
+
 
 The service uses the same `trolley-defense-history-v1` format as the userscript. Exact displayed names identify players; duplicate names are treated as one person. Unchanged defenses add no encounters or score samples. A return to an earlier defense updates its `lastSeen` time without duplicating its text.
 
